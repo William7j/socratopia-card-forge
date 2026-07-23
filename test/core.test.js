@@ -62,6 +62,16 @@ test("修复 JSON 字符串中的真实换行和尾随逗号", () => {
   assert.deepEqual(cards[0].issues, []);
 });
 
+test("修复模型在 JSON 字符串中漏转义的双引号", () => {
+  const response = {
+    choices: [{ message: { content: '{"cards":[{"source_id":"S6","type":"qa","fields":{"question":"对阶为何采用"小阶向大阶看齐"原则？","answer":"避免高位丢失。"},"tags":[]}]}' } }],
+  };
+  const cards = parseGeneratedCards(response, ["qa"]);
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].fields.question, '对阶为何采用"小阶向大阶看齐"原则？');
+  assert.deepEqual(cards[0].issues, []);
+});
+
 test("从额外说明中提取顶层卡片数组", () => {
   const response = {
     choices: [{ message: { content: '以下是结果：\n[{"source_id":"S1","type":"qa","fields":{"question":"Q","answer":"A"},"tags":[]}]\n完成。' } }],

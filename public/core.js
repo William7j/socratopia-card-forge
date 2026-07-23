@@ -370,6 +370,45 @@ function escapeControlCharactersInStrings(source) {
   return output;
 }
 
+function escapeUnescapedQuotesInStrings(source) {
+  let output = "";
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (!inString) {
+      output += char;
+      if (char === '"') inString = true;
+      continue;
+    }
+    if (escaped) {
+      output += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      output += char;
+      escaped = true;
+      continue;
+    }
+    if (char !== '"') {
+      output += char;
+      continue;
+    }
+
+    let next = index + 1;
+    while (/\s/.test(source[next] || "")) next += 1;
+    if (next >= source.length || [":", ",", "}", "]"].includes(source[next])) {
+      output += char;
+      inString = false;
+    } else {
+      // A quote followed by text cannot close a JSON string, so preserve it as content.
+      output += '\\"';
+    }
+  }
+  return output;
+}
+
 function removeTrailingCommas(source) {
   let output = "";
   let inString = false;
@@ -418,8 +457,16 @@ export function parseJsonObject(content) {
   ].filter(Boolean);
 
   for (const candidate of [...new Set(candidates)]) {
-    const escaped = escapeControlCharactersInStrings(candidate);
-    const attempts = [candidate, escaped, removeTrailingCommas(candidate), removeTrailingCommas(escaped)];
+    const quotesEscaped = escapeUnescapedQuotesInStrings(candidate);
+    const escaped = escapeControlCharactersInStrings(quotesEscaped);
+    const attempts = [
+      candidate,
+      quotesEscaped,
+      escaped,
+      removeTrailingCommas(candidate),
+      removeTrailingCommas(quotesEscaped),
+      removeTrailingCommas(escaped),
+    ];
     for (const attempt of [...new Set(attempts)]) {
       try {
         return normalizeParsedJson(JSON.parse(attempt));
