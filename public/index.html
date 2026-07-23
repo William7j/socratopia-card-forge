@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Socratopia 卡片工坊</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#import" aria-label="Socratopia 卡片工坊首页">
+      <span class="brand-mark">S</span>
+      <span><b>SOCRATOPIA</b><small>卡片工坊</small></span>
+    </a>
+    <nav class="stage-tabs" aria-label="工作流程">
+      <button class="stage-tab is-active" data-stage="import"><span>01</span> 导入</button>
+      <button class="stage-tab" data-stage="generate"><span>02</span> 生成</button>
+      <button class="stage-tab" data-stage="results"><span>03</span> 结果</button>
+    </nav>
+    <div class="top-actions">
+      <span class="service-state"><i></i> 本地运行</span>
+      <details class="export-menu" id="exportMenu">
+        <summary class="button button-dark">导出 / 导入</summary>
+        <div class="menu-popover">
+          <button data-export="anki">导入到 Anki</button>
+          <div class="menu-separator"></div>
+          <button data-export="json">JSON</button>
+          <button data-export="universal">通用 TSV</button>
+          <button data-export="basic">Anki Basic TSV</button>
+          <button data-export="cloze">Anki Cloze TSV</button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="stage-panel is-active" id="stage-import" aria-labelledby="importTitle">
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow">SOURCE DECK</span>
+          <h1 id="importTitle">导入学习材料</h1>
+        </div>
+        <span class="file-state" id="fileState">尚未载入文件</span>
+      </div>
+
+      <div class="import-layout">
+        <label class="dropzone" id="dropzone">
+          <input id="fileInput" type="file" accept=".tsv,.csv,.txt,.md,.markdown,text/plain,text/tab-separated-values,text/csv">
+          <span class="drop-icon">+</span>
+          <strong>选择卡组或材料文件</strong>
+          <span>TSV · CSV · TXT · Markdown</span>
+        </label>
+        <div class="import-side">
+          <div class="format-badge">ANKI TSV</div>
+          <h2>自动识别<br>字段与标签</h2>
+          <div class="side-actions">
+            <button class="button button-light" id="sampleButton">载入示例</button>
+            <button class="button button-accent" id="continueButton" disabled>继续配置</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="metrics" id="sourceMetrics" hidden>
+        <div><span>材料</span><strong id="metricSources">0</strong></div>
+        <div><span>已选择</span><strong id="metricSelected">0</strong></div>
+        <div><span>来源类型</span><strong id="metricFormat">—</strong></div>
+        <div><span>原卡组</span><strong id="metricDeck">—</strong></div>
+      </div>
+
+      <section class="data-section" id="sourceSection" hidden>
+        <div class="section-toolbar">
+          <div>
+            <h2>材料清单</h2>
+            <span id="sourceCountLabel">0 条</span>
+          </div>
+          <div class="toolbar-actions">
+            <label class="search-field">
+              <span>⌕</span>
+              <input id="sourceSearch" type="search" placeholder="筛选材料或标签">
+            </label>
+            <button class="button button-light" id="toggleAllSources">取消全选</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th class="check-cell"></th><th>材料</th><th>标签</th><th class="index-cell">编号</th></tr>
+            </thead>
+            <tbody id="sourceRows"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="sourcePageLabel">1 / 1</span>
+          <div>
+            <button class="icon-button" id="sourcePrev" title="上一页" aria-label="上一页">←</button>
+            <button class="icon-button" id="sourceNext" title="下一页" aria-label="下一页">→</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="stage-panel" id="stage-generate" aria-labelledby="generateTitle">
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow">GENERATION RUN</span>
+          <h1 id="generateTitle">配置生成任务</h1>
+        </div>
+        <span class="file-state" id="generateSelectionState">0 条材料待处理</span>
+      </div>
+
+      <div class="generate-layout">
+        <div class="settings-column">
+          <section class="form-section">
+            <div class="section-title"><span>01</span><h2>API 接入</h2></div>
+            <div class="form-grid">
+              <label class="field field-wide">
+                <span>API 基础地址或完整接口地址</span>
+                <input id="baseUrl" type="url" value="https://api.openai.com/v1" spellcheck="false" autocomplete="off">
+              </label>
+              <label class="field">
+                <span>API Key</span>
+                <span class="input-with-action">
+                  <input id="apiKey" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off" autocapitalize="off">
+                  <button type="button" id="toggleKey" title="显示或隐藏密钥" aria-label="显示或隐藏密钥">◉</button>
+                </span>
+              </label>
+              <label class="field">
+                <span>模型</span>
+                <input id="model" type="text" value="gpt-4.1-mini" spellcheck="false" autocomplete="off">
+              </label>
+            </div>
+            <div class="inline-row">
+              <label class="switch"><input id="jsonMode" type="checkbox"><span></span> JSON 模式</label>
+              <label class="switch"><input id="rememberKey" type="checkbox" checked><span></span> 本机记住 Key</label>
+              <button class="button button-light button-small" id="forgetKeyButton" type="button">忘记 Key</button>
+              <button class="button button-light button-small" id="testApiButton">测试连接</button>
+              <span class="inline-status" id="apiStatus"></span>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-title"><span>02</span><h2>卡片策略</h2></div>
+            <div class="type-picker" id="typePicker">
+              <label><input type="checkbox" value="qa" checked><span><b>QA</b>问答</span></label>
+              <label><input type="checkbox" value="cloze" checked><span><b>CLOZE</b>填空</span></label>
+              <label><input type="checkbox" value="judge" checked><span><b>T / F</b>判断</span></label>
+              <label><input type="checkbox" value="choice" checked><span><b>A—D</b>单选</span></label>
+              <label><input type="checkbox" value="multichoice" checked><span><b>A—E</b>多选</span></label>
+            </div>
+            <div class="form-grid compact-grid">
+              <label class="field">
+                <span>类型倾向</span>
+                <select id="preference">
+                  <option value="balanced">均衡多样</option>
+                  <option value="understanding">理解优先</option>
+                  <option value="memory">记忆优先</option>
+                  <option value="custom">由模型判断</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>每条材料</span>
+                <select id="cardsPerSource"><option value="auto" selected>AI 自主决定</option><option value="1">1 张卡</option><option value="2">2 张卡</option><option value="3">3 张卡</option></select>
+              </label>
+              <label class="field">
+                <span>每批材料</span>
+                <select id="batchSize"><option value="auto" selected>自动分批</option><option value="3">3 条</option><option value="5">5 条</option><option value="8">8 条</option><option value="10">10 条</option></select>
+              </label>
+              <label class="field">
+                <span>并发请求</span>
+                <select id="concurrency"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section prompt-section">
+            <div class="section-title"><span>03</span><h2>生成提示词</h2></div>
+            <textarea id="promptEditor" rows="14" spellcheck="false"></textarea>
+            <div class="prompt-footer">
+              <span id="promptLength">0 字符</span>
+              <button class="text-button" id="resetPrompt">恢复默认</button>
+            </div>
+          </section>
+        </div>
+
+        <aside class="run-panel">
+          <div class="run-panel-head">
+            <span>RUN / 01</span>
+            <i id="runIndicator"></i>
+          </div>
+          <h2 id="runTitle">等待开始</h2>
+          <div class="run-count"><strong id="runCompleted">0</strong><span>/ <b id="runTotal">0</b> 批</span></div>
+          <div class="progress-track"><span id="runProgress"></span></div>
+          <div class="run-stats">
+            <div><span>已生成</span><b id="runCards">0</b></div>
+            <div><span>质量告警</span><b id="runWarnings">0</b></div>
+            <div><span>失败批次</span><b id="runFailed">0</b></div>
+          </div>
+          <div class="run-log" id="runLog" aria-live="polite">
+            <p><time>—</time><span>任务尚未开始</span></p>
+          </div>
+          <div class="run-actions">
+            <button class="button button-accent" id="startButton">开始生成</button>
+            <button class="button button-light" id="pauseButton" disabled>暂停</button>
+            <button class="button button-danger" id="stopButton" disabled>停止</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="stage-panel" id="stage-results" aria-labelledby="resultsTitle">
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow">QUALITY REVIEW</span>
+          <h1 id="resultsTitle">检查生成结果</h1>
+        </div>
+        <span class="file-state" id="resultState">0 张卡片</span>
+      </div>
+
+      <div class="result-summary">
+        <div class="summary-total"><span>VALID CARDS</span><strong id="validCards">0</strong><small id="validRate">通过率 —</small></div>
+        <div class="distribution" id="distribution"></div>
+      </div>
+
+      <section class="data-section results-section">
+        <div class="section-toolbar result-toolbar">
+          <div class="filter-tabs" id="resultFilters">
+            <button class="is-active" data-filter="all">全部 <b>0</b></button>
+            <button data-filter="qa">问答 <b>0</b></button>
+            <button data-filter="cloze">填空 <b>0</b></button>
+            <button data-filter="judge">判断 <b>0</b></button>
+            <button data-filter="choice">单选 <b>0</b></button>
+            <button data-filter="multichoice">多选 <b>0</b></button>
+            <button data-filter="warning">告警 <b>0</b></button>
+          </div>
+          <label class="search-field">
+            <span>⌕</span>
+            <input id="resultSearch" type="search" placeholder="筛选卡片或标签">
+          </label>
+        </div>
+        <div class="empty-state" id="emptyResults">
+          <strong>暂无生成结果</strong>
+          <button class="button button-light" data-go-stage="generate">返回生成</button>
+        </div>
+        <div class="result-list" id="resultList"></div>
+        <div class="pagination" id="resultPagination" hidden>
+          <span id="resultPageLabel">1 / 1</span>
+          <div>
+            <button class="icon-button" id="resultPrev" title="上一页" aria-label="上一页">←</button>
+            <button class="icon-button" id="resultNext" title="下一页" aria-label="下一页">→</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="cardDialog">
+    <form method="dialog" id="cardForm">
+      <div class="dialog-head">
+        <div><span>EDIT CARD</span><h2>编辑卡片</h2></div>
+        <button class="icon-button" type="button" data-close-dialog title="关闭" aria-label="关闭">×</button>
+      </div>
+      <input id="editCardId" type="hidden">
+      <label class="field"><span>卡型</span><select id="editType"></select></label>
+      <label class="field edit-question"><span>问题</span><textarea id="editQuestion" rows="3"></textarea></label>
+      <label class="field edit-content"><span>填空内容</span><textarea id="editContent" rows="4"></textarea></label>
+      <label class="field edit-answer"><span>答案</span><textarea id="editAnswer" rows="3"></textarea></label>
+      <label class="field edit-options"><span>选项（每行一个）</span><textarea id="editOptions" rows="6"></textarea></label>
+      <label class="field"><span>补充说明</span><textarea id="editRemark" rows="4"></textarea></label>
+      <label class="field"><span>标签（空格分隔）</span><input id="editTags" type="text"></label>
+      <div class="dialog-issues" id="dialogIssues"></div>
+      <div class="dialog-actions">
+        <button class="button button-light" type="button" data-close-dialog>取消</button>
+        <button class="button button-accent" id="saveCardButton" value="default">保存卡片</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ankiDialog" class="anki-dialog">
+    <div class="dialog-body">
+      <div class="dialog-head">
+        <div><span>ANKICONNECT</span><h2>导入 Anki</h2></div>
+        <button class="icon-button" type="button" data-close-anki title="关闭" aria-label="关闭">×</button>
+      </div>
+
+      <div class="anki-connection">
+        <i id="ankiConnectionDot"></i>
+        <div><strong id="ankiConnectionTitle">正在检测 Anki</strong><span id="ankiConnectionDetail">127.0.0.1:8765</span></div>
+        <button class="button button-light button-small" id="ankiRefreshButton" type="button">重新检测</button>
+      </div>
+
+      <div class="anki-import-grid">
+        <label class="field">
+          <span>目标牌组</span>
+          <input id="ankiDeck" type="text" list="ankiDeckOptions" placeholder="Socratopia Rich" autocomplete="off">
+          <datalist id="ankiDeckOptions"></datalist>
+        </label>
+        <div class="anki-counts">
+          <div><span>待导入</span><strong id="ankiCardCount">0</strong></div>
+          <div><span>排除告警</span><strong id="ankiExcludedCount">0</strong></div>
+        </div>
+      </div>
+
+      <div class="anki-model-section">
+        <div class="anki-section-head"><span>笔记类型</span><button class="text-button" id="ankiSyncTemplates" type="button">同步模板</button></div>
+        <div class="anki-model-list" id="ankiModelList"></div>
+      </div>
+
+      <div class="anki-progress" id="ankiProgress" hidden>
+        <div><span id="ankiProgressText">准备导入</span><b id="ankiProgressCount">0 / 0</b></div>
+        <div class="progress-track"><span id="ankiProgressBar"></span></div>
+      </div>
+      <div class="dialog-issues" id="ankiIssues"></div>
+
+      <div class="dialog-actions anki-dialog-actions">
+        <button class="button button-light" type="button" data-close-anki>取消</button>
+        <button class="button button-accent" id="ankiImportButton" type="button" disabled>导入卡片</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
